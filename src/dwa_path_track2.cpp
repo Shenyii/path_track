@@ -1,13 +1,27 @@
 #include "dwa_path_track2.h"
 
 One_Particle::One_Particle()
-:predict_step_(2),evaluate_value_(0),predicte_time_(4)
+:predict_step_(2),evaluate_value_(0),predicte_time_(12)
 {}
 
 One_Particle::One_Particle(nav_msgs::Path path , nav_msgs::OccupancyGrid map)
-:predict_step_(2),evaluate_value_(0),predicte_time_(4)
+:predict_step_(2),evaluate_value_(0),predicte_time_(12)
 {
     productParticle(path , map);
+}
+
+One_Particle::One_Particle(One_Particle* particle , nav_msgs::Path path , nav_msgs::OccupancyGrid map)
+:predict_step_(2),evaluate_value_(0),predicte_time_(12)
+{
+    first_time_ = particle->first_time_;
+    for(int i = 0;i < particle->speed_encode_.size();i++)
+    {
+        speed_encode_.push_back(particle->speed_encode_[i]);
+    }
+
+    generateTrajectory();
+
+    setEvaluateValue(path , map);
 }
 
 One_Particle::~One_Particle()
@@ -21,7 +35,7 @@ void One_Particle::productParticle(nav_msgs::Path path , nav_msgs::OccupancyGrid
         speed_encode_.push_back(rand() % 26);
     }
     //first_time_ = double(rand() % 400) / 100;
-    first_time_ = (double)(Random(100)) / 25.0; 
+    first_time_ = (double)(Random(300)) / 25.0; 
 
     generateTrajectory();
 
@@ -34,7 +48,7 @@ void One_Particle::neighbourSearch(One_Particle* particle , nav_msgs::Path path 
     {
         while(ros::ok())
         {
-            speed_encode_[i] = particle->speed_encode_[i] + rand() % 7 - 3;
+            speed_encode_[i] = particle->speed_encode_[i] + Random(105) % 7 - 3;
             if(speed_encode_[i] >= 0 && speed_encode_[i] <= 26)
             {
                 break;
@@ -43,7 +57,7 @@ void One_Particle::neighbourSearch(One_Particle* particle , nav_msgs::Path path 
         while(ros::ok())
         {
             double rand_num = Random(100);
-            double det_ttt = rand_num / 100.0 - 0.5;
+            double det_ttt = rand_num / 100.0;
             first_time_ = particle->first_time_ + det_ttt;
             if(first_time_ > 0 && first_time_ < predicte_time_)
             {
@@ -75,7 +89,6 @@ void One_Particle::generateTrajectory()
     q1[2] = car_in_map_g->oz();
     q1[3] = car_in_map_g->ow();
     M1.setRotation(q1);
-    double t0 = rand() % 400 / 100;
     for(int i = 0;i < speed_encode_.size();i++)
     {
         double v , w;
@@ -116,6 +129,7 @@ void One_Particle::generateTrajectory()
 
 void One_Particle::setEvaluateValue(nav_msgs::Path path,nav_msgs::OccupancyGrid map)
 {
+    evaluate_value_ = 0;
     nav_msgs::Path path2 = path;
     double min_dis = 100000;
     int n = 0;
@@ -159,6 +173,8 @@ void One_Particle::setEvaluateValue(nav_msgs::Path path,nav_msgs::OccupancyGrid 
             }
         }
     }
+
+    evaluate_value_ += (1 / exp(fabs(speed_encode_[0] - 12.5)));
 }
 
 void One_Particle::displayTrajectory()
@@ -175,6 +191,7 @@ void One_Particle::displayTrajectory()
     pub_path_rviz_.publish(path);
     cout << "the evaluate value is:" << evaluate_value_ << endl;
     cout << "the sample param is: " << move_radius_[speed_encode_[0]] << ", " <<move_radius_[speed_encode_[1]] << ", " << first_time_ << endl;
+    cout << endl;
 }
 
 bool One_Particle::trajectoryVelidCheck()
@@ -184,7 +201,7 @@ bool One_Particle::trajectoryVelidCheck()
 ////////////////////////////////////////////////////////////////////////////////////
 
 Dwa_Path_Track::Dwa_Path_Track()
-:get_path_flag_(0),get_map_flag_(0),particle_num_(100)
+:get_path_flag_(0),get_map_flag_(0),particle_num_(500),best_particle_(NULL)
 {
     car_in_map_g = make_shared<Tf_Listerner>("map" , "base_footprint");
     pub_velocity_ = n_.advertise<geometry_msgs::Twist>("/cmd_vel",5);
@@ -268,46 +285,51 @@ void Dwa_Path_Track::threadRunTwo()
             get_path_flag_ = 2;
             for(int i = 0;i < particle_swarm_.size();i++)
             {
-                //delete particle_swarm_[i];
+                delete particle_swarm_[i];
             }
             particle_swarm_.clear();
-            for(int i = 0;i < particle_num_;i++)
+            if(best_particle_ != NULL)
+            {
+                particle_swarm_.push_back(new One_Particle(best_particle_  , path_ , dwa_map_));
+            }
+            for(int i = 1;i < particle_num_;i++)
             {
                 particle_swarm_.push_back(new One_Particle(path_,dwa_map_));
             }
+            sort(particle_swarm_.begin() , particle_swarm_.end() , lessThan);
         }
         else if(get_path_flag_ == 2)
         {
-            sort(particle_swarm_.begin() , particle_swarm_.end() , lessThan);
-
-            ////////////////////////////////////////////////////////////test
-            particle_swarm_[0]->displayTrajectory();
-            pubVelocity(particle_swarm_[0]);
             get_path_flag_ = 1;
             double x3 = car_in_map_g->x() - path_.poses[path_.poses.size() - 1].pose.position.x;
             double y3 = car_in_map_g->y() - path_.poses[path_.poses.size() - 1].pose.position.y;
-            if(x3 * x3 + y3 * y3 < 0.2)
+            if(sqrt(x3 * x3 + y3 * y3) < 0.5)
             {
                 get_path_flag_ = 3;
-                cout << "agv is nearby to destination." << sqrt(x3 * x3 + y3 * y3) << endl;
+                cout << "agv is nearby to destination." << endl;
                 geometry_msgs::Twist velocity;
                 velocity.linear.x = 0;
                 velocity.angular.z = 0;
                 pub_velocity_.publish(velocity);
+                continue;
             }
-            ////////////////////////////////////////////////////////////test
 
-            for(int i = 0;i < 50;i++)
+            for(int i = 0;i < 10;i++)
             {
-                for(int j = 1;j < particle_swarm_.size() / 2;j++)
+                for(int j = 1;j < particle_swarm_.size() / 5;j++)
                 {
                     particle_swarm_[j]->neighbourSearch(particle_swarm_[0] , path_ , dwa_map_);
                 }
-                for(int j = particle_swarm_.size() /2;j < particle_swarm_.size();j++)
+                for(int j = particle_swarm_.size() / 5;j < particle_swarm_.size();j++)
                 {
                     particle_swarm_[j]->productParticle(path_,dwa_map_);
                 }
             }
+            sort(particle_swarm_.begin() , particle_swarm_.end() , lessThan);
+            particle_swarm_[0]->displayTrajectory();
+            pubVelocity(particle_swarm_[0]);
+            delete best_particle_;
+            best_particle_ = new One_Particle(particle_swarm_[0] , path_ , dwa_map_);
         }
     }
 }
@@ -319,13 +341,11 @@ void Dwa_Path_Track::pubVelocity(One_Particle* particle)
     {
         velocity.linear.x = 0.3 * fabs(particle->move_radius_[particle->speed_encode_[0]]);
         velocity.angular.z = velocity.linear.x / particle->move_radius_[particle->speed_encode_[0]];
-        //cout << "test1:" << velocity.linear.x << "," << velocity.angular.z << endl;
     }
     else
     {
         velocity.linear.x = 0.3;
         velocity.angular.z = velocity.linear.x / particle->move_radius_[particle->speed_encode_[0]];
-        //cout << "test2:" << velocity.linear.x << "," << velocity.angular.z << endl;
     }
     if(velocity.linear.x > 0.5 || velocity.angular.z > 0.5)
     {

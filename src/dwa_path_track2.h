@@ -30,6 +30,7 @@ public:
     One_Particle();
 	~One_Particle();
 	One_Particle(nav_msgs::Path path , nav_msgs::OccupancyGrid map);
+	One_Particle(One_Particle* particle , nav_msgs::Path path , nav_msgs::OccupancyGrid map);
     // double move_radius_[38] = {-23.3,-14.4,-8.9,-5.5,-3.4,-2.1,-1.3,-0.8,-0.5,-0.3,-0.2,-0.1,-0.087,-0.054,-0.033,-0.021,-0.011,0.01,-0.001,
 	//                            0.001,0.01,0.011,0.021,0.033,0.054,0.087,0.1,0.2,0.3,0.5,0.8,1.3,2.1,3.4,5.5,8.9,14.4,23.3};
 	// double move_radius_[38] = {0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,
@@ -73,6 +74,7 @@ private:
 	nav_msgs::OccupancyGrid dwa_map_;
 	int get_map_flag_;
 	vector<One_Particle*> particle_swarm_;
+	One_Particle* best_particle_;
 	int particle_num_;
 
 	
