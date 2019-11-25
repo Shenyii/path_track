@@ -52,6 +52,27 @@ void pubLine()
     cout << "product a path." << endl;
 }
 
+void pubLine7()
+{
+    double car_x = car_in_map_->x();
+    double car_y = car_in_map_->y();
+    nav_msgs::Path path;
+    path.header.frame_id = "map";
+    path.poses.resize(30);
+    for(int i = 0;i < path.poses.size() / 2;i++)
+    {
+        path.poses[i].pose.position.x = car_x + 0.15 * i;
+        path.poses[i].pose.position.y = car_y;
+    }
+    for(int i = path.poses.size() / 2;i < path.poses.size();i++)
+    {
+        path.poses[i].pose.position.x = path.poses[path.poses.size() / 2 - 1].pose.position.x;
+        path.poses[i].pose.position.y = car_y + 0.15 * (i - path.poses.size() / 2 + 1);
+    }
+    pub_path_.publish(path);
+    cout << "product a path." << endl;
+}
+
 int main(int argc,char** argv)
 {
     ros::init(argc, argv, "product_path");
@@ -65,6 +86,7 @@ int main(int argc,char** argv)
         cin >> path_shape;
         if(path_shape == 'l') pubLine();
         else if(path_shape == 's') pubPath();
+        else if(path_shape == '7') pubLine7();
         else cout << "please a regualte char." << endl;
     }
     return 0;

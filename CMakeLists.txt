@@ -221,6 +221,10 @@ add_executable(dwa_path_track2 src/dwa_path_track2.cpp src/tf_listerner.cpp)
 target_link_libraries(dwa_path_track2 ${catkin_LIBRARIES})
 add_dependencies(dwa_path_track2 dwa_path_track2_gencpp)
 
+add_executable(robot_kinematic_model src/robot_kinematic_model.cpp src/tf_listerner.cpp)
+target_link_libraries(robot_kinematic_model ${catkin_LIBRARIES})
+add_dependencies(robot_kinematic_model robot_kinematic_model_gencpp)
+
 
 
 
