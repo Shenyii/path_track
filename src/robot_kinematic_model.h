@@ -25,6 +25,9 @@
 using namespace std;
 //using namespace boost;
 
+#define max_lin_acc 2.5
+#define max_ang_acc 3
+
 boost::shared_ptr<Tf_Listerner> car_in_map_g;
 
 class Robot_Model
@@ -40,6 +43,8 @@ private:
 	double linear_vel_;
 	double angular_vel_;
 	tf::TransformBroadcaster robot_to_map_;
+	double real_lin_vel_;
+	double real_ang_vel_;
 
 	void subCmdVel(geometry_msgs::Twist msg);
 	void changeRobotPosition();

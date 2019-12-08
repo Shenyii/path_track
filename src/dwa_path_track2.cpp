@@ -88,38 +88,55 @@ void One_Particle::generateTrajectory()
     car_in_map_.position.x = car_in_map_g->x();
     car_in_map_.position.y = car_in_map_g->y();
     trajectory_point_.clear();
+    double v0_x = real_linear_vel;
+    double v0oz = real_angular_vel;
     double pre_car_x = car_in_map_g->x();
     double pre_car_y = car_in_map_g->y();
     double pre_car_theta = acos(2 * car_in_map_g->ow() * car_in_map_g->ow() - 1);
-    pre_car_theta = car_in_map_g->oz() * car_in_map_g->ow() > 0 ? pre_car_theta:(0 - pre_car_theta);
-    
-    
-    tf::Quaternion q1;
-    tf::Matrix3x3 M1;
-    q1[0] = 0;
-    q1[1] = 0;
-    q1[2] = car_in_map_g->oz();
-    q1[3] = car_in_map_g->ow();
-    M1.setRotation(q1);
+    pre_car_theta = car_in_map_g->oz() * car_in_map_g->ow() > 0 ? pre_car_theta : (0 - pre_car_theta);
+
     for(int i = 0;i < speed_encode_.size();i++)
     {
-        double v , w;
+        double v0 , w0;
         double circle_x , circle_y;
-        v = fabs(max_linear_vel);
-        w = v / move_radius_[speed_encode_[i]];
-        if(fabs(w) > fabs(max_angular_vel))
+        v0 = 0.3;
+        w0 = v0 / move_radius_[speed_encode_[i]];
+        if(fabs(w0) > 0.3)
         {
-            v = max_angular_vel * fabs(move_radius_[speed_encode_[i]]);
-            w = v / move_radius_[speed_encode_[i]];
+            v0 = 0.3 * fabs(move_radius_[speed_encode_[i]]);
+            w0 = v0 / move_radius_[speed_encode_[i]];
         }
-
-        circle_x = M1[0][1] * v / w + pre_car_x;
-        circle_y = M1[1][1] * v / w + pre_car_y;
 
         double t1 = (i == 1 ? predicte_time_ - first_time_ : first_time_);
         for(int j = 0;j < t1 * 10;j++)
         {
             double det_tt = 0.1;
+            double v , w;
+
+            v = fabs(v0 - v0_x) / det_tt > max_linear_acc ? v0_x + (v0 - v0_x) / fabs(v0 - v0_x) * max_linear_acc * det_tt : v0;
+            w = fabs(w0 - v0oz) / det_tt > max_angular_acc ? v0oz + (w0 - v0oz) / fabs(w0 - v0oz) * max_angular_acc * det_tt : w0;
+            
+            // if(fabs(v0 - v0_x) / det_tt > max_linear_acc)
+            // {
+            //     v = v0_x + (v0 - v0_x) / fabs(v0 - v0_x) * max_linear_acc * det_tt;
+            // }
+            // else
+            // {
+            //     v = v0;
+            // }
+            // if(fabs(w0 - v0oz) / det_tt > max_angular_acc)
+            // {
+            //     w = v0oz + (w0 - v0oz) / fabs(w0 - v0oz) * max_linear_acc * det_tt;
+            // }
+            // else
+            // {
+            //     v = w0;
+            // }
+            v = v0;
+            w = w0;
+
+            circle_x = pre_car_x - v / w * sin(pre_car_theta);
+            circle_y = pre_car_y + v / w * cos(pre_car_theta);
             pre_car_x = circle_x + v / w * sin(pre_car_theta + w * det_tt);
             pre_car_y = circle_y - v / w * cos(pre_car_theta + w * det_tt);
             pre_car_theta = pre_car_theta + w * det_tt;
@@ -129,10 +146,6 @@ void One_Particle::generateTrajectory()
             point.z = 0;
             trajectory_point_.push_back(point);
         }
-        
-        q1[2] = sin(pre_car_theta / 2);
-        q1[3] = cos(pre_car_theta / 2);
-        M1.setRotation(q1);
     }
 }
 
@@ -186,6 +199,23 @@ void One_Particle::setEvaluateValue(nav_msgs::Path path,nav_msgs::OccupancyGrid 
     evaluate_value_ += (1 / exp(fabs(speed_encode_[0] - 12.5)));
 
     evaluate_value_ += (0.1 / exp(first_time_ / predicte_time_));
+
+    // for(int i = 1;i < 5;i++)
+    // {
+    //     if(i >= path2.poses.size())
+    //     {
+    //         break;
+    //     }
+    //     for(int j = 0;j < trajectory_point_.size();j++)
+    //     {
+    //         double xx = trajectory_point_[j].x - 1.6;
+    //         double yy = trajectory_point_[j].y - 0;
+    //         if(sqrt(xx * xx + yy * yy) < 0.1)
+    //         {
+    //             evaluate_value_ += 10;
+    //         }
+    //     }
+    // }
 }
 
 void One_Particle::displayTrajectory()
@@ -346,21 +376,30 @@ void Dwa_Path_Track::threadRunTwo()
 
 void Dwa_Path_Track::pubVelocity(One_Particle* particle)
 {
+    static double last_time = ros::Time::now().toSec();
+    double delta_t = ros::Time::now().toSec() - last_time;
+    last_time = ros::Time::now().toSec();
+    delta_t = delta_t == 0 ? 0.1 : delta_t;
     geometry_msgs::Twist velocity;
-    velocity.linear.x = 2;
-    velocity.angular.z = velocity.linear.x / particle->move_radius_[particle->speed_encode_[0]];
-    if(fabs(velocity.angular.z) > fabs(1))
+    double v_x, voz;
+    v_x = max_linear_vel;
+    voz = v_x / particle->move_radius_[particle->speed_encode_[0]];
+    if(fabs(voz) > max_angular_vel)
     {
-        velocity.linear.x = 1 * fabs(particle->move_radius_[particle->speed_encode_[0]]);
-        velocity.angular.z = velocity.linear.x / particle->move_radius_[particle->speed_encode_[0]];
+        v_x = max_angular_vel * fabs(particle->move_radius_[particle->speed_encode_[0]]);
+        voz = v_x / particle->move_radius_[particle->speed_encode_[0]];
     }
-    if(velocity.linear.x > 3 || velocity.angular.z > 1)
+    if(v_x > 3 || voz > 1)
     {
         cout << "velocity command is error!!!" << endl;
     }
     else
     {
-        cout << "the output velocity is: " << velocity.linear.x << " , " << velocity.angular.z << endl << endl;
+        velocity.linear.x = fabs(real_linear_vel - v_x) / delta_t > max_linear_acc ? real_linear_vel + (v_x - real_linear_vel) / fabs(real_linear_vel - v_x) * max_linear_acc * delta_t : v_x;
+        velocity.angular.z = fabs(real_angular_vel - voz) / delta_t > max_angular_acc ? real_angular_vel + (voz - real_angular_vel) / fabs(real_angular_vel - voz) * max_angular_acc * delta_t : voz;
+        real_linear_vel = velocity.linear.x;
+        real_angular_vel = velocity.angular.z;
+        cout << "the output velocity is: " << velocity.linear.x << " , " << velocity.angular.z << " , " << delta_t << endl << endl;
         pub_velocity_.publish(velocity);
     }
 }

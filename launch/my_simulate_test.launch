@@ -18,4 +18,10 @@
     <node name="product_path" pkg="path_track" type="product_path" output="screen"/>
 
     <node name="robot_kinematic_model" pkg="path_track" type="robot_kinematic_model"/>
+
+    <!--node name="dwa_path_track2" pkg="path_track" type="dwa_path_track2"/-->
+
+    <!--node name="dwa" pkg="path_track" type="dwa"/-->
+
+    <!--node name="pure_pursuit" pkg="path_track" type="pure_pursuit"/-->
 </launch>

@@ -19,11 +19,13 @@
 #include <dynamic_reconfigure/server.h>
 #include <ctime>
 #include <stdio.h>
-#include <dynamic_reconfigure/server.h>
 
-#define max_linear_vel 0.3
-#define max_angular_vel 0.3
-
+#define max_linear_vel 0.7
+#define max_angular_vel 1
+#define max_linear_acc 2.5
+#define max_angular_acc 3
+double real_linear_vel = 0;
+double real_angular_vel = 0;
 
 using namespace std;
 //using namespace boost;

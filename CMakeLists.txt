@@ -98,6 +98,7 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 generate_dynamic_reconfigure_options(
   cfg/path_track.cfg
+  cfg/dwa.cfg
 )
 
 ###################################
@@ -224,6 +225,18 @@ add_dependencies(dwa_path_track2 dwa_path_track2_gencpp)
 add_executable(robot_kinematic_model src/robot_kinematic_model.cpp src/tf_listerner.cpp)
 target_link_libraries(robot_kinematic_model ${catkin_LIBRARIES})
 add_dependencies(robot_kinematic_model robot_kinematic_model_gencpp)
+
+add_executable(collect_data src/collect_data.cpp src/tf_listerner.cpp)
+target_link_libraries(collect_data ${catkin_LIBRARIES})
+add_dependencies(collect_data collect_data_gencpp)
+
+add_executable(pure_pursuit src/pure_pursuit.cpp src/tf_listerner.cpp)
+target_link_libraries(pure_pursuit ${catkin_LIBRARIES})
+add_dependencies(pure_pursuit pure_pursuit_gencpp)
+
+add_executable(dwa src/dwa.cpp src/tf_listerner.cpp)
+target_link_libraries(dwa ${catkin_LIBRARIES})
+add_dependencies(dwa dwa_gencpp)
 
 
 

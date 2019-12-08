@@ -1,7 +1,7 @@
 #include "robot_kinematic_model.h"
 
 Robot_Model::Robot_Model()
-:linear_vel_(0),angular_vel_(0)
+:linear_vel_(0),angular_vel_(0),real_lin_vel_(0),real_ang_vel_(0)
 {
     robot_to_map_.sendTransform(tf::StampedTransform(tf::Transform(tf::Quaternion(0,0,0,1),tf::Vector3(0,0,0)),
                                 ros::Time::now(),"map","base_footprint"));
@@ -37,12 +37,20 @@ void Robot_Model::changeRobotPosition()
     robot_x = car_in_map_g->x();
     robot_y = car_in_map_g->y();
     angular_vel_ = angular_vel_ == 0 ? 0.001 : angular_vel_;
-    circle_x = robot_x - linear_vel_ / angular_vel_ * sin(robot_theta);
-    circle_y = robot_y + linear_vel_ / angular_vel_ * cos(robot_theta);
-    x = circle_x + linear_vel_ / angular_vel_ * sin(robot_theta + angular_vel_ * det_t);
-    y = circle_y - linear_vel_ / angular_vel_ * cos(robot_theta + angular_vel_ * det_t);
-    ow = cos((robot_theta + angular_vel_ * det_t) / 2);
-    oz = sin((robot_theta + angular_vel_ * det_t) / 2);
+
+    
+    real_lin_vel_ = fabs(linear_vel_ - real_lin_vel_) / det_t > max_lin_acc ? real_lin_vel_ + (linear_vel_ - real_lin_vel_) / fabs(linear_vel_ - real_lin_vel_) * max_lin_acc * det_t : linear_vel_;
+    real_ang_vel_ = fabs(angular_vel_ - real_ang_vel_) / det_t > max_ang_acc ? real_ang_vel_ + (angular_vel_ - real_ang_vel_) / fabs(angular_vel_ - real_ang_vel_) * max_ang_acc * det_t : angular_vel_;
+    
+    //cout << "(" << linear_vel_ << " , " << angular_vel_ << ")";
+    //cout << " ,(" << real_lin_vel_ << " , " << real_ang_vel_ << ")" << endl;
+    
+    circle_x = robot_x - real_lin_vel_ / real_ang_vel_ * sin(robot_theta);
+    circle_y = robot_y + real_lin_vel_ / real_ang_vel_ * cos(robot_theta);
+    x = circle_x + real_lin_vel_ / real_ang_vel_ * sin(robot_theta + real_ang_vel_ * det_t);
+    y = circle_y - real_lin_vel_ / real_ang_vel_ * cos(robot_theta + real_ang_vel_ * det_t);
+    ow = cos((robot_theta + real_ang_vel_ * det_t) / 2);
+    oz = sin((robot_theta + real_ang_vel_ * det_t) / 2);
     robot_to_map_.sendTransform(tf::StampedTransform(tf::Transform(tf::Quaternion(0,0,oz,ow),tf::Vector3(x,y,0)),
                                 ros::Time::now(),"map","base_footprint"));
     ros::Duration(0.0095).sleep();
