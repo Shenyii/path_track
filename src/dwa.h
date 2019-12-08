@@ -78,10 +78,10 @@ public:
         theta = 0;
         v = 0;
         w = 0;
-        heading = 0;
+        heading = 100;
         Vel_Evaluation = 0;
-        Obstacle_Penalty = 0;
-        Score = 100;
+        Obstacle_Penalty = 100;
+        Score = 1000;
         heading_sum = 0;
         Vel_sum = 0;
         Penatly_sum = 0;
@@ -97,7 +97,8 @@ public:
     DWA();
     ~DWA();
     int load_path_success ;
-    int running_flag ;
+    int running_flag ; 
+    int obstacle_flag;
     int count;
     double sample_time;
     double max_vel;
@@ -130,12 +131,15 @@ private:
     ros::Publisher PC_pub_;
     ros::Publisher Line_pub_;
     ros::Subscriber sub_;
+    ros::Subscriber sub_ob_;
     nav_msgs::Path PATH;
+    nav_msgs::Path OB_STORE;
 
     //void DWA_Algorithm(model);
     void CurrentSTATE();
     void Motion_model();
     void sub_pathCB(nav_msgs::Path GlobalPath);
+    void sub_obCB(nav_msgs::Path OBPATH);
     void Cal_Velocity_Space();
     double Cal_Heading(STATE A);
     void NormalizeEval();
@@ -143,6 +147,9 @@ private:
     void dynamicCb(path_track::DWA_Config &config,uint32_t level);
     double Cal_Vector_Heading(tf::Vector3 V1, tf::Vector3 V2);
     double distance_Heading(STATE A);
+    double StopDist(STATE A);
+    double Dist2Obstacle(STATE A);
+
 };
 
 

@@ -200,22 +200,10 @@ void One_Particle::setEvaluateValue(nav_msgs::Path path,nav_msgs::OccupancyGrid 
 
     evaluate_value_ += (0.1 / exp(first_time_ / predicte_time_));
 
-    // for(int i = 1;i < 5;i++)
-    // {
-    //     if(i >= path2.poses.size())
-    //     {
-    //         break;
-    //     }
-    //     for(int j = 0;j < trajectory_point_.size();j++)
-    //     {
-    //         double xx = trajectory_point_[j].x - 1.6;
-    //         double yy = trajectory_point_[j].y - 0;
-    //         if(sqrt(xx * xx + yy * yy) < 0.1)
-    //         {
-    //             evaluate_value_ += 10;
-    //         }
-    //     }
-    // }
+    if(trajectoryVelidCheck() == 0)
+    {
+        evaluate_value_ += 15;
+    }
 }
 
 void One_Particle::displayTrajectory()
@@ -235,7 +223,28 @@ void One_Particle::displayTrajectory()
 }
 
 bool One_Particle::trajectoryVelidCheck()
-{}
+{
+    for(int j = 0;j < trajectory_point_.size();j++)
+    {
+        double xx = trajectory_point_[j].x - trajectory_point_[0].x;
+        double yy = trajectory_point_[j].y - trajectory_point_[0].y;
+        if(sqrt(xx * xx + yy * yy) > 1)
+        {
+            break;
+        }
+        int x = trajectory_point_[j].x * 10;
+        int y = trajectory_point_[j].y * 10 + 15;
+        x = x < 0 ? 0 : x;
+        x = x > 30 ? 30 : x;
+        y = y < 0 ? 0 : y;
+        y = y > 30 ? 30 : y;
+        if(map_g[x][y] == 1)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -248,6 +257,7 @@ Dwa_Path_Track::Dwa_Path_Track()
 	sub_dwa_map_ = n_.subscribe("/move_base/local_costmap/costmap",1,&Dwa_Path_Track::subDwaMap,this);
 	sub_path_ = n_.subscribe("/own_path",1,&Dwa_Path_Track::subPath,this);
     pub_path_rviz_ = n_.advertise<sensor_msgs::PointCloud>("/predicte_path",2);
+    loadMap();
 
     pthreadTwo();
 
@@ -402,6 +412,20 @@ void Dwa_Path_Track::pubVelocity(One_Particle* particle)
         cout << "the output velocity is: " << velocity.linear.x << " , " << velocity.angular.z << " , " << delta_t << endl << endl;
         pub_velocity_.publish(velocity);
     }
+}
+
+void Dwa_Path_Track::loadMap()
+{
+    for(int i = 0; i < 30; i++)
+    {
+        for(int j = 0; j < 30; j++)
+        {
+            map_g[i][j] = 0;
+        }
+    }
+    map_g[15][14] = 1;
+    map_g[15][15] = 1;
+    map_g[15][16] = 1;
 }
 
 int main(int argc,char** argv)
