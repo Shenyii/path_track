@@ -7,6 +7,7 @@ Robot_Model::Robot_Model()
                                 ros::Time::now(),"map","base_footprint"));
     car_in_map_g = boost::make_shared<Tf_Listerner>("map" , "base_footprint");
     sub_vel_ = n_.subscribe("/cmd_vel", 5, &Robot_Model::subCmdVel,this);
+    pub_act_vel_ = n_.advertise<geometry_msgs::Twist>("/actural_velocity_of_car", 3);
 
     while(ros::ok())
     {
@@ -38,7 +39,6 @@ void Robot_Model::changeRobotPosition()
     robot_y = car_in_map_g->y();
     angular_vel_ = angular_vel_ == 0 ? 0.001 : angular_vel_;
 
-    
     real_lin_vel_ = fabs(linear_vel_ - real_lin_vel_) / det_t > max_lin_acc ? real_lin_vel_ + (linear_vel_ - real_lin_vel_) / fabs(linear_vel_ - real_lin_vel_) * max_lin_acc * det_t : linear_vel_;
     real_ang_vel_ = fabs(angular_vel_ - real_ang_vel_) / det_t > max_ang_acc ? real_ang_vel_ + (angular_vel_ - real_ang_vel_) / fabs(angular_vel_ - real_ang_vel_) * max_ang_acc * det_t : angular_vel_;
     
@@ -53,6 +53,12 @@ void Robot_Model::changeRobotPosition()
     oz = sin((robot_theta + real_ang_vel_ * det_t) / 2);
     robot_to_map_.sendTransform(tf::StampedTransform(tf::Transform(tf::Quaternion(0,0,oz,ow),tf::Vector3(x,y,0)),
                                 ros::Time::now(),"map","base_footprint"));
+    
+    geometry_msgs::Twist act_vel;
+    act_vel.linear.x = real_lin_vel_;
+    act_vel.angular.z = real_ang_vel_;
+    pub_act_vel_.publish(act_vel);
+    
     ros::Duration(0.0095).sleep();
 }
 

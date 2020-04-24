@@ -25,8 +25,8 @@
 using namespace std;
 //using namespace boost;
 
-#define max_lin_acc 2.5
-#define max_ang_acc 3
+#define max_lin_acc 1
+#define max_ang_acc 1
 
 boost::shared_ptr<Tf_Listerner> car_in_map_g;
 
@@ -40,6 +40,7 @@ private:
     ros::NodeHandle n_;
 	ros::Subscriber sub_vel_;// = nh.subscribe("topic_name", 1000, subCallback);
 	ros::Publisher pub_robot_to_map_;// = nh.advertise<std_msgs::String>("topic_name", 1000);
+	ros::Publisher pub_act_vel_;
 	double linear_vel_;
 	double angular_vel_;
 	tf::TransformBroadcaster robot_to_map_;
