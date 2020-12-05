@@ -13,7 +13,7 @@
 
     <!--node name="camera_location" pkg="agv_driver" type="camera_location"/-->
 
-    <node name="rviz" pkg="rviz" type="rviz" output="screen"/>
+    <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find path_track)/rviz/config0.rviz"/>
 
     <node name="product_path" pkg="path_track" type="product_path" output="screen"/>
 
